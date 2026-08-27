@@ -30,9 +30,9 @@ jobs:
           touch .env
           API_KEY="${{ secrets.GEMINI_API_KEY }}"
           if [ -z "$API_KEY" ]; then
-            API_KEY=""
+            API_KEY="DEFAULT_API_KEY"
           fi
-          echo "GEMINI_API_KEY=$API_KEY" >> .env
+          echo "GEMINI_API_KEY=$API_KEY" > .env
           if [ -f debug.keystore.base64 ]; then
             base64 -d debug.keystore.base64 > debug.keystore
           else
