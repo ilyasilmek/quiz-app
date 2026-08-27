@@ -1,0 +1,6 @@
+{
+  "name": "Trivia",
+  "description": "Bilgi yarışması ve rekabetçi trivia oyunu. Kategori seçimi, 1v1 hızlı oyunlar, arkadaşla maç, yapay zeka ile quiz oluşturma ve ayrıntılı istatistikler.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
