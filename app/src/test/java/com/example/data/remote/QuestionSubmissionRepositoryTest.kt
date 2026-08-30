@@ -6,15 +6,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class QuestionSubmissionRepositoryTest {
-    private val api = object : QuestionSubmissionApi {
-        override suspend fun submitQuestion(request: SubmitQuestionRequest): SubmitQuestionResponse {
+    private class RecordingApi : QuestionSubmissionApi {
+        var authorization: String? = null
+
+        override suspend fun submitQuestion(
+            request: SubmitQuestionRequest,
+            authorization: String,
+        ): SubmitQuestionResponse {
+            this.authorization = authorization
             return SubmitQuestionResponse("test-id", "pending_review", 0)
         }
     }
 
     @Test
     fun rejectsQuestionWithFewerThanFourOptions() = runTest {
-        val result = RemoteQuestionSubmissionRepository(api).submit(
+        val result = RemoteQuestionSubmissionRepository(RecordingApi(), AuthTokenProvider { "test-access-token" }).submit(
             categoryId = "history",
             question = "Bu yeterince uzun bir soru mu?",
             options = listOf("A", "B", "C"),
@@ -28,7 +34,7 @@ class QuestionSubmissionRepositoryTest {
 
     @Test
     fun rejectsDuplicateOptionsAfterTrim() = runTest {
-        val result = RemoteQuestionSubmissionRepository(api).submit(
+        val result = RemoteQuestionSubmissionRepository(RecordingApi(), AuthTokenProvider { "test-access-token" }).submit(
             categoryId = "history",
             question = "Bu da yeterince uzun bir soru mu?",
             options = listOf("Ankara", " Ankara ", "İzmir", "Bursa"),
@@ -42,7 +48,8 @@ class QuestionSubmissionRepositoryTest {
 
     @Test
     fun trimsAndSubmitsValidPayload() = runTest {
-        val result = RemoteQuestionSubmissionRepository(api).submit(
+        val api = RecordingApi()
+        val result = RemoteQuestionSubmissionRepository(api, AuthTokenProvider { "test-access-token" }).submit(
             categoryId = "history",
             question = "  Osmanlı Devleti'nin ilk başkenti neresidir?  ",
             options = listOf(" Bursa ", "Edirne", "İstanbul", "Söğüt"),
@@ -53,5 +60,20 @@ class QuestionSubmissionRepositoryTest {
 
         assertTrue(result.isSuccess)
         assertEquals("pending_review", result.getOrThrow().status)
+        assertEquals("Bearer test-access-token", api.authorization)
+    }
+
+    @Test
+    fun rejectsSubmissionWithoutAnAuthenticatedSession() = runTest {
+        val result = RemoteQuestionSubmissionRepository(RecordingApi(), AuthTokenProvider { null }).submit(
+            categoryId = "history",
+            question = "Bu yeterince uzun bir soru mu?",
+            options = listOf("A", "B", "C", "D"),
+            correctIndex = 0,
+            explanation = null,
+            sourceUrl = null,
+        )
+
+        assertTrue(result.isFailure)
     }
 }
