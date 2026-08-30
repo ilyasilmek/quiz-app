@@ -1,7 +1,5 @@
 package com.example.data.remote
 
-import com.example.data.remote.dto.SubmitQuestionRequest
-import com.example.data.remote.dto.SubmitQuestionResponse
 import java.util.UUID
 
 class QuestionSubmissionRepositoryImpl(
@@ -27,7 +25,7 @@ class QuestionSubmissionRepositoryImpl(
                 explanation = explanation,
                 source_url = sourceUrl,
             ),
-            token,
+            "Bearer $token",
         )
     }
 }
