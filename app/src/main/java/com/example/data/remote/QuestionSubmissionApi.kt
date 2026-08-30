@@ -1,11 +1,9 @@
 package com.example.data.remote
 
-import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
 
-@JsonClass(generateAdapter = true)
 data class SubmitQuestionRequest(
     val client_request_id: String,
     val category_id: String,
@@ -16,7 +14,6 @@ data class SubmitQuestionRequest(
     val source_url: String? = null
 )
 
-@JsonClass(generateAdapter = true)
 data class SubmitQuestionResponse(
     val submission_id: String,
     val status: String,
