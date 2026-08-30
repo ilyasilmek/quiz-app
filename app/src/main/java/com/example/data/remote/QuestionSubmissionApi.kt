@@ -2,6 +2,7 @@ package com.example.data.remote
 
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 @JsonClass(generateAdapter = true)
@@ -25,5 +26,8 @@ data class SubmitQuestionResponse(
 
 interface QuestionSubmissionApi {
     @POST("submit-question")
-    suspend fun submitQuestion(@Body request: SubmitQuestionRequest): SubmitQuestionResponse
+    suspend fun submitQuestion(
+        @Body request: SubmitQuestionRequest,
+        @Header("Authorization") authorization: String,
+    ): SubmitQuestionResponse
 }
