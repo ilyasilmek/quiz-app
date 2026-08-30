@@ -30,6 +30,11 @@ import com.example.ui.screens.StatisticsScreen
 import com.example.ui.screens.QuestionSuggestionScreen
 import com.example.ui.theme.BrandBgNavy
 import com.example.ui.theme.MyApplicationTheme
+import com.example.data.remote.AuthTokenProvider
+import com.example.data.remote.QuestionSubmissionSession
+import com.example.data.remote.RemoteQuestionSubmissionRepository
+import com.example.data.remote.SupabaseApiFactory
+import com.example.viewmodel.QuestionSuggestionViewModel
 import com.example.viewmodel.Screen
 import com.example.viewmodel.TriviaViewModel
 
@@ -70,7 +75,15 @@ fun TriviaApp(viewModel: TriviaViewModel = viewModel()) {
     val aiQuestionCount by viewModel.aiQuestionCount.collectAsState()
     val aiDifficulty by viewModel.aiDifficulty.collectAsState()
     val isGeneratingAiQuiz by viewModel.isGeneratingAiQuiz.collectAsState()
-    val suggestionViewModel: com.example.viewmodel.QuestionSuggestionViewModel = viewModel()
+    val suggestionRepository = remember {
+        RemoteQuestionSubmissionRepository(
+            api = SupabaseApiFactory.questionSubmissionApi(BuildConfig.PUBLIC_API_BASE_URL),
+            authTokenProvider = AuthTokenProvider { QuestionSubmissionSession.accessToken() },
+        )
+    }
+    val suggestionViewModel: QuestionSuggestionViewModel = viewModel(
+        factory = QuestionSuggestionViewModel.factory(suggestionRepository),
+    )
     val suggestionCategory by suggestionViewModel.category.collectAsState()
     val suggestionQuestion by suggestionViewModel.question.collectAsState()
     val suggestionOptions by suggestionViewModel.options.collectAsState()
@@ -78,6 +91,8 @@ fun TriviaApp(viewModel: TriviaViewModel = viewModel()) {
     val suggestionExplanation by suggestionViewModel.explanation.collectAsState()
     val suggestionSource by suggestionViewModel.source.collectAsState()
     val suggestionSubmitted by suggestionViewModel.submitted.collectAsState()
+    val suggestionIsSubmitting by suggestionViewModel.isSubmitting.collectAsState()
+    val suggestionError by suggestionViewModel.submissionError.collectAsState()
     var showQuestionSuggestion by remember { mutableStateOf(false) }
 
     if (showQuestionSuggestion) {
@@ -89,6 +104,8 @@ fun TriviaApp(viewModel: TriviaViewModel = viewModel()) {
             explanation = suggestionExplanation,
             source = suggestionSource,
             submitted = suggestionSubmitted,
+            isSubmitting = suggestionIsSubmitting,
+            submissionError = suggestionError,
             onCategoryChange = suggestionViewModel::setCategory,
             onQuestionChange = suggestionViewModel::setQuestion,
             onOptionChange = suggestionViewModel::setOption,

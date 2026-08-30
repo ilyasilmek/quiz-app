@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,6 +41,8 @@ fun QuestionSuggestionScreen(
     explanation: String,
     source: String,
     submitted: Boolean,
+    isSubmitting: Boolean,
+    submissionError: String?,
     onCategoryChange: (String) -> Unit,
     onQuestionChange: (String) -> Unit,
     onOptionChange: (Int, String) -> Unit,
@@ -138,13 +141,17 @@ fun QuestionSuggestionScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                submissionError?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
+
                 Button(
                     onClick = onSubmit,
-                    enabled = valid,
+                    enabled = valid && !isSubmitting,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
                 ) {
-                    Text("Onaya Gönder")
+                    Text(if (isSubmitting) "Gönderiliyor..." else "Onaya Gönder")
                 }
             }
             Spacer(Modifier.height(24.dp))
