@@ -3,6 +3,7 @@ package com.bilgiarenasi.admin.data
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -33,8 +34,14 @@ data class AdminReviewRequest(
 
 interface AdminApi {
     @GET("admin-question-queue")
-    suspend fun queue(@Query("status") status: String = "pending_review"): AdminQueueResponse
+    suspend fun queue(
+        @Query("status") status: String = "pending_review",
+        @Header("Authorization") authorization: String,
+    ): AdminQueueResponse
 
     @POST("admin-question-review")
-    suspend fun review(@Body request: AdminReviewRequest): Map<String, Any?>
+    suspend fun review(
+        @Body request: AdminReviewRequest,
+        @Header("Authorization") authorization: String,
+    ): Map<String, Any?>
 }
