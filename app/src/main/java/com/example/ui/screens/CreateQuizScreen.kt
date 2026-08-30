@@ -75,6 +75,7 @@ fun CreateQuizScreen(
     onCorrectOptionChange: (Int) -> Unit,
     onAddQuestion: () -> Unit,
     onPublish: () -> Unit,
+    onSuggestQuestion: () -> Unit,
     onSwitchToAi: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -282,6 +283,23 @@ fun CreateQuizScreen(
                             }
                         }
                     }
+                }
+
+                OutlinedButton(
+                    onClick = onSuggestQuestion,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("suggest_question_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandGoldLight)
+                ) {
+                    Text(
+                        text = "Tek Soru Öner",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = BrandGoldLight
+                    )
                 }
 
                 // Add Question Button
