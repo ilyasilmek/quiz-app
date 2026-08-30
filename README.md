@@ -50,3 +50,24 @@ gradle :app:assembleRelease
 Projeye `.github/workflows/build-apk.yml` eklenmiştir. GitHub'a `push` yaptığınızda GitHub Actions otomatik olarak:
 1. Projeyi derler.
 2. `app-debug.apk` dosyasını Actions sekmesinde indirilebilir **Artifact** olarak sunar.
+
+
+## Ürün İlkeleri
+
+- Tamamen ücretsiz.
+- Tamamen reklamsız.
+- Abonelik ve uygulama içi satın alma yok.
+- Oyuncu tarafından gönderilen sorular doğrudan yayınlanmaz; doğrulama ve admin moderasyonundan geçer.
+- Oyuncu uygulaması admin API'sine bağlanmaz.
+
+## Üretim Mimarisi
+
+Detaylar:
+- `docs/ROADMAP.md`
+- `docs/SECURITY_BOUNDARY.md`
+- `docs/QUESTION_MODERATION.md`
+- `docs/API_CONTRACT.md`
+- `docs/database.sql`
+- `docs/ADMIN_APP.md`
+
+> Mevcut Android prototipi Jetpack Compose tabanlıdır. README'deki mevcut özellikler prototip kapsamını ifade eder; gerçek backend/server-authoritative oyun üretim fazında devreye alınacaktır.
