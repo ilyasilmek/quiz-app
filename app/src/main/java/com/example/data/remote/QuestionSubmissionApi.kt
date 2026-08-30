@@ -6,6 +6,7 @@ import retrofit2.http.POST
 
 @JsonClass(generateAdapter = true)
 data class SubmitQuestionRequest(
+    val client_request_id: String,
     val category_id: String,
     val question: String,
     val options: List<String>,
@@ -18,7 +19,8 @@ data class SubmitQuestionRequest(
 data class SubmitQuestionResponse(
     val submission_id: String,
     val status: String,
-    val duplicate_candidates: Int
+    val duplicate_candidates: Int,
+    val idempotent_replay: Boolean = false
 )
 
 interface QuestionSubmissionApi {
