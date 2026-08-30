@@ -10,6 +10,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.screens.ActiveQuizScreen
@@ -24,6 +27,7 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.QuizDetailScreen
 import com.example.ui.screens.SplashScreen
 import com.example.ui.screens.StatisticsScreen
+import com.example.ui.screens.QuestionSuggestionScreen
 import com.example.ui.theme.BrandBgNavy
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.Screen
@@ -66,6 +70,37 @@ fun TriviaApp(viewModel: TriviaViewModel = viewModel()) {
     val aiQuestionCount by viewModel.aiQuestionCount.collectAsState()
     val aiDifficulty by viewModel.aiDifficulty.collectAsState()
     val isGeneratingAiQuiz by viewModel.isGeneratingAiQuiz.collectAsState()
+    val suggestionViewModel: com.example.viewmodel.QuestionSuggestionViewModel = viewModel()
+    val suggestionCategory by suggestionViewModel.category.collectAsState()
+    val suggestionQuestion by suggestionViewModel.question.collectAsState()
+    val suggestionOptions by suggestionViewModel.options.collectAsState()
+    val suggestionCorrectIndex by suggestionViewModel.correctIndex.collectAsState()
+    val suggestionExplanation by suggestionViewModel.explanation.collectAsState()
+    val suggestionSource by suggestionViewModel.source.collectAsState()
+    val suggestionSubmitted by suggestionViewModel.submitted.collectAsState()
+    var showQuestionSuggestion by remember { mutableStateOf(false) }
+
+    if (showQuestionSuggestion) {
+        QuestionSuggestionScreen(
+            category = suggestionCategory,
+            question = suggestionQuestion,
+            options = suggestionOptions,
+            correctIndex = suggestionCorrectIndex,
+            explanation = suggestionExplanation,
+            source = suggestionSource,
+            submitted = suggestionSubmitted,
+            onCategoryChange = suggestionViewModel::setCategory,
+            onQuestionChange = suggestionViewModel::setQuestion,
+            onOptionChange = suggestionViewModel::setOption,
+            onCorrectChange = suggestionViewModel::setCorrect,
+            onExplanationChange = suggestionViewModel::setExplanation,
+            onSourceChange = suggestionViewModel::setSource,
+            onSubmit = suggestionViewModel::submit,
+            onReset = suggestionViewModel::reset,
+            onBack = { showQuestionSuggestion = false }
+        )
+        return
+    }
 
     Crossfade(targetState = currentScreen, label = "screen_transition") { screen ->
         when (screen) {
@@ -147,6 +182,7 @@ fun TriviaApp(viewModel: TriviaViewModel = viewModel()) {
                     onCorrectOptionChange = { idx -> viewModel.setDraftCorrectOption(idx) },
                     onAddQuestion = { viewModel.addDraftQuestion() },
                     onPublish = { viewModel.publishManualQuiz() },
+                    onSuggestQuestion = { showQuestionSuggestion = true },
                     onSwitchToAi = { viewModel.navigateTo(Screen.AI_GENERATOR) },
                     onBack = { viewModel.navigateTo(Screen.HOME) }
                 )
