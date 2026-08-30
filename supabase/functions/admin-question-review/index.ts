@@ -47,13 +47,31 @@ Deno.serve(async (req) => {
     .single();
   if (submissionError || !submission) return json({ error: 'submission_not_found' }, 404);
 
+  if (action === 'approve' && !['pending_review'].includes(submission.status)) {
+    return json({ error: 'invalid_state_transition', status: submission.status }, 409);
+  }
+  if (action === 'publish' && submission.status !== 'approved') {
+    return json({ error: 'publish_requires_approval', status: submission.status }, 409);
+  }
+
   if (['publish', 'approve'].includes(action)) {
-    const { data: duplicates } = await adminClient
-      .from('question_duplicate_candidates')
-      .select('existing_question_id, similarity, method')
-      .eq('submission_id', submissionId)
-      .gte('similarity', 0.92);
-    if (duplicates?.length) {
+    const [{ data: publishedDuplicates }, { data: pendingDuplicates }] = await Promise.all([
+      adminClient
+        .from('question_duplicate_candidates')
+        .select('existing_question_id, similarity, method')
+        .eq('submission_id', submissionId)
+        .gte('similarity', 0.92),
+      adminClient
+        .from('submission_duplicate_candidates')
+        .select('duplicate_submission_id, similarity, method')
+        .eq('submission_id', submissionId)
+        .gte('similarity', 0.92),
+    ]);
+    const duplicates = [
+      ...(publishedDuplicates ?? []).map((d) => ({ ...d, scope: 'published' })),
+      ...(pendingDuplicates ?? []).map((d) => ({ ...d, scope: 'pending_submission' })),
+    ];
+    if (duplicates.length) {
       return json({ error: 'duplicate_review_required', duplicates }, 409);
     }
   }
@@ -77,11 +95,12 @@ Deno.serve(async (req) => {
       .single();
     if (questionError || !question) return json({ error: 'publish_failed' }, 500);
 
-    await adminClient.from('question_submissions').update({
+    const { error: submissionUpdateError } = await adminClient.from('question_submissions').update({
       status: 'published',
       reviewed_by: user.id,
       reviewed_at: new Date().toISOString(),
     }).eq('id', submissionId);
+    if (submissionUpdateError) return json({ error: 'submission_state_update_failed' }, 500);
 
     await adminClient.from('admin_audit_log').insert({
       admin_id: user.id,
