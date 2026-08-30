@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   const requestIdRaw = String(payload.client_request_id ?? '').trim();
   const clientRequestId = requestIdRaw || crypto.randomUUID();
   const categoryId = String(payload.category_id ?? '');
-  const question = String(payload.question ?? '').trim();
+  const question = String(payload.question ?? payload.question_text ?? '').trim();
   const options = Array.isArray(payload.options) ? payload.options.map((x) => String(x).trim()) : [];
   const correctIndex = Number(payload.correct_index);
   const explanation = String(payload.explanation ?? '').trim() || null;
@@ -60,12 +60,7 @@ Deno.serve(async (req) => {
     .eq('client_request_id', clientRequestId)
     .maybeSingle();
   if (previous) {
-    return json({
-      submission_id: previous.id,
-      status: previous.status,
-      duplicate_candidates: 0,
-      idempotent_replay: true,
-    }, 200);
+    return json({ submission_id: previous.id, status: previous.status, duplicate_candidates: 0, idempotent_replay: true });
   }
 
   const normalizedQuestion = normalizeTurkishText(question);
@@ -74,7 +69,7 @@ Deno.serve(async (req) => {
 
   const [{ data: exactPublished, error: publishedError }, { data: exactPending, error: pendingError }] = await Promise.all([
     adminClient.from('questions').select('id').eq('normalized_hash', normalizedHash).limit(5),
-    adminClient.from('question_submissions').select('id').neq('status', 'rejected').neq('status', 'archived').eq('normalized_hash', normalizedHash).limit(5),
+    adminClient.from('question_submissions').select('id, status').neq('status', 'rejected').neq('status', 'archived').eq('normalized_hash', normalizedHash).limit(5),
   ]);
   if (publishedError || pendingError) return json({ error: 'duplicate_check_failed' }, 500);
 
@@ -100,34 +95,21 @@ Deno.serve(async (req) => {
 
   const existing = exactPublished ?? [];
   if (existing.length) {
-    const { error } = await adminClient.from('question_duplicate_candidates').insert(
-      existing.map((match) => ({
-        submission_id: submission.id,
-        existing_question_id: match.id,
-        similarity: 1,
-        method: 'exact_hash',
-      })),
+    const { error } = await adminClient.from('question_duplicate_candidates').upsert(
+      existing.map((match) => ({ submission_id: submission.id, existing_question_id: match.id, similarity: 1, method: 'exact_hash' })),
+      { onConflict: 'submission_id,existing_question_id', ignoreDuplicates: true },
     );
     if (error) return json({ error: 'duplicate_record_failed' }, 500);
   }
 
   const pending = (exactPending ?? []).filter((row) => row.id !== submission.id);
   if (pending.length) {
-    const { error } = await adminClient.from('submission_duplicate_candidates').insert(
-      pending.map((match) => ({
-        submission_id: submission.id,
-        duplicate_submission_id: match.id,
-        similarity: 1,
-        method: 'exact_hash',
-      })),
+    const { error } = await adminClient.from('submission_duplicate_candidates').upsert(
+      pending.map((match) => ({ submission_id: submission.id, duplicate_submission_id: match.id, similarity: 1, method: 'exact_hash' })),
+      { onConflict: 'submission_id,duplicate_submission_id', ignoreDuplicates: true },
     );
     if (error) return json({ error: 'pending_duplicate_record_failed' }, 500);
   }
 
-  return json({
-    submission_id: submission.id,
-    status: submission.status,
-    duplicate_candidates: existing.length + pending.length,
-    idempotent_replay: false,
-  }, 201);
+  return json({ submission_id: submission.id, status: submission.status, duplicate_candidates: existing.length + pending.length, idempotent_replay: false }, 201);
 });
