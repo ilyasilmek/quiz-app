@@ -1,0 +1,29 @@
+name: Player Boundary
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify-player-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject admin endpoint references in player source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RIn --exclude-dir=.git --exclude='*.md' \
+            -e 'admin-question-review' \
+            -e '/admin/v1' \
+            app/src/main/java app/src/main/res 2>/dev/null; then
+            echo 'Player app contains a private admin API reference.' >&2
+            exit 1
+          fi
+      - name: Require production architecture docs
+        shell: bash
+        run: |
+          test -f docs/SECURITY_BOUNDARY.md
+          test -f docs/QUESTION_MODERATION.md
+          test -f supabase/migrations/20260830100000_content_platform.sql
