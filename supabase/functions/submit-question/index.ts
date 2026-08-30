@@ -39,6 +39,8 @@ Deno.serve(async (req) => {
   const payload = await req.json().catch(() => null);
   if (!payload) return json({ error: 'invalid_json' }, 400);
 
+  const requestIdRaw = String(payload.client_request_id ?? '').trim();
+  const clientRequestId = requestIdRaw || crypto.randomUUID();
   const categoryId = String(payload.category_id ?? '');
   const question = String(payload.question ?? '').trim();
   const options = Array.isArray(payload.options) ? payload.options.map((x) => String(x).trim()) : [];
@@ -49,6 +51,21 @@ Deno.serve(async (req) => {
   if (!categoryId || question.length < 10 || options.length !== 4 || options.some((x) => !x) ||
       new Set(options.map(normalizeTurkishText)).size !== 4 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
     return json({ error: 'validation_failed' }, 422);
+  }
+
+  const { data: previous } = await adminClient
+    .from('question_submissions')
+    .select('id, status, created_at')
+    .eq('author_id', user.id)
+    .eq('client_request_id', clientRequestId)
+    .maybeSingle();
+  if (previous) {
+    return json({
+      submission_id: previous.id,
+      status: previous.status,
+      duplicate_candidates: 0,
+      idempotent_replay: true,
+    }, 200);
   }
 
   const normalizedQuestion = normalizeTurkishText(question);
@@ -73,6 +90,7 @@ Deno.serve(async (req) => {
       source_url: sourceUrl,
       normalized_hash: normalizedHash,
       fingerprint,
+      client_request_id: clientRequestId,
       status: 'pending_review',
     })
     .select('id, status, created_at')
@@ -110,5 +128,6 @@ Deno.serve(async (req) => {
     submission_id: submission.id,
     status: submission.status,
     duplicate_candidates: existing.length + pending.length,
+    idempotent_replay: false,
   }, 201);
 });
