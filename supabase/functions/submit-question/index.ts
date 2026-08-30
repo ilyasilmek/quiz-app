@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { normalizeTurkishText, questionFingerprintInput } from '../_shared/normalize.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,13 +10,6 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   status,
   headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 });
-
-const normalize = (value: string) => value
-  .normalize('NFKC')
-  .toLocaleLowerCase('tr-TR')
-  .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
 
 const sha256 = async (value: string) => {
   const bytes = new TextEncoder().encode(value);
@@ -53,14 +47,13 @@ Deno.serve(async (req) => {
   const sourceUrl = String(payload.source_url ?? '').trim() || null;
 
   if (!categoryId || question.length < 10 || options.length !== 4 || options.some((x) => !x) ||
-      new Set(options.map(normalize)).size !== 4 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+      new Set(options.map(normalizeTurkishText)).size !== 4 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
     return json({ error: 'validation_failed' }, 422);
   }
 
-  const normalizedQuestion = normalize(question);
-  const normalizedOptions = options.map(normalize);
+  const normalizedQuestion = normalizeTurkishText(question);
   const normalizedHash = await sha256(normalizedQuestion);
-  const fingerprint = await sha256(`${normalizedQuestion}|${normalizedOptions.join('|')}|${correctIndex}`);
+  const fingerprint = await sha256(questionFingerprintInput(question, options, correctIndex));
 
   const [{ data: exactPublished, error: publishedError }, { data: exactPending, error: pendingError }] = await Promise.all([
     adminClient.from('questions').select('id').eq('normalized_hash', normalizedHash).limit(5),
