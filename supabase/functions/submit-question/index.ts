@@ -5,11 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+});
 
 const normalize = (value: string) => value
   .normalize('NFKC')
@@ -63,13 +62,11 @@ Deno.serve(async (req) => {
   const normalizedHash = await sha256(normalizedQuestion);
   const fingerprint = await sha256(`${normalizedQuestion}|${normalizedOptions.join('|')}|${correctIndex}`);
 
-  // A matching hash never gets auto-published. The service only records the candidate.
-  const { data: exactMatches, error: matchError } = await adminClient
-    .from('questions')
-    .select('id')
-    .eq('normalized_hash', normalizedHash)
-    .limit(5);
-  if (matchError) return json({ error: 'duplicate_check_failed' }, 500);
+  const [{ data: exactPublished, error: publishedError }, { data: exactPending, error: pendingError }] = await Promise.all([
+    adminClient.from('questions').select('id').eq('normalized_hash', normalizedHash).limit(5),
+    adminClient.from('question_submissions').select('id').neq('status', 'rejected').neq('status', 'archived').eq('normalized_hash', normalizedHash).limit(5),
+  ]);
+  if (publishedError || pendingError) return json({ error: 'duplicate_check_failed' }, 500);
 
   const { data: submission, error: insertError } = await adminClient
     .from('question_submissions')
@@ -90,20 +87,35 @@ Deno.serve(async (req) => {
 
   if (insertError || !submission) return json({ error: 'submission_failed' }, 500);
 
-  if (exactMatches?.length) {
-    await adminClient.from('question_duplicate_candidates').insert(
-      exactMatches.map((match) => ({
+  const existing = exactPublished ?? [];
+  if (existing.length) {
+    const { error } = await adminClient.from('question_duplicate_candidates').insert(
+      existing.map((match) => ({
         submission_id: submission.id,
         existing_question_id: match.id,
         similarity: 1,
         method: 'exact_hash',
       })),
     );
+    if (error) return json({ error: 'duplicate_record_failed' }, 500);
+  }
+
+  const pending = (exactPending ?? []).filter((row) => row.id !== submission.id);
+  if (pending.length) {
+    const { error } = await adminClient.from('submission_duplicate_candidates').insert(
+      pending.map((match) => ({
+        submission_id: submission.id,
+        duplicate_submission_id: match.id,
+        similarity: 1,
+        method: 'exact_hash',
+      })),
+    );
+    if (error) return json({ error: 'pending_duplicate_record_failed' }, 500);
   }
 
   return json({
     submission_id: submission.id,
     status: submission.status,
-    duplicate_candidates: exactMatches?.length ?? 0,
+    duplicate_candidates: existing.length + pending.length,
   }, 201);
 });
