@@ -13,9 +13,15 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        val privateApiBase = System.getenv("ADMIN_PRIVATE_API_BASE_URL")
+            ?: "https://ADMIN_PRIVATE_API_NOT_CONFIGURED/"
+        buildConfigField("String", "PRIVATE_API_BASE_URL", "\"$privateApiBase\"")
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
