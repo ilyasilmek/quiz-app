@@ -1,8 +1,8 @@
 package com.example.data.repository
 
-import com.example.data.remote.dto.QuestionSubmissionRequest
-import com.example.data.remote.dto.QuestionSubmissionResponse
+import com.example.data.remote.SubmitQuestionRequest
+import com.example.data.remote.SubmitQuestionResponse
 
 interface QuestionSubmissionRepository {
-    suspend fun submit(request: QuestionSubmissionRequest): Result<QuestionSubmissionResponse>
+    suspend fun submit(request: SubmitQuestionRequest): Result<SubmitQuestionResponse>
 }
